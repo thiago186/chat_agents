@@ -1,12 +1,14 @@
 """This module contains all the schemas for the application."""
 
-from typing import Optional
 from datetime import datetime
+import logging
+from typing import Optional
 from uuid import uuid4, UUID
 
 from sqlmodel import SQLModel, Field
 
 from dependencies.auth import encrypt_field, verify_field
+
 
 class User(SQLModel, table=True):
     """This class defines the schema for the User model."""
@@ -24,14 +26,3 @@ class User(SQLModel, table=True):
 
     def verify_password(self, password: str):
         return verify_field(password, self.hashed_password)
-
-
-if __name__ == "__main__":
-    mockUser = User(
-        email="test@mail.com",
-        username="testUser",
-        current_plan="free",
-        plan_due_date=datetime.utcnow(),
-        created_at=datetime.utcnow(),
-        active=True
-    )

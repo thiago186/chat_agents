@@ -8,5 +8,4 @@ app = FastAPI()
 
 app.include_router(test.router)
 
-
 from schemas.users import User
