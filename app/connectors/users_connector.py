@@ -28,6 +28,7 @@ def build_tables(password):
     else:
         print("You don't have permission to do this. Users will not be reseted.")
 
+
 def reset_tables(password):
     """
     Reset all the tables in the database. This function is only available for the admin user.
@@ -63,3 +64,24 @@ async def update_user_active_status(user_id: int, active: bool):
             return user
         else:
             return None
+
+
+async def get_user_by_email(email: str):
+    """
+    Get a user by its email.
+    """
+    with Session(engine) as session:
+        statement = select(User).where(User.email == email)
+        users = session.exec(statement)
+        return users.first()
+
+
+async def get_user_by_id(user_id: str):
+    """
+    Get a user by its email.
+    """
+    with Session(engine) as session:
+        statement = select(User).where(User.user_id == user_id)
+        users = session.exec(statement)
+        return users.first()
+
