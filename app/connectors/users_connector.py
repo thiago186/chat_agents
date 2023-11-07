@@ -1,13 +1,12 @@
 """This file contains the connector for the users table."""
 
 import os
-import pytest
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import SQLModel, Session, create_engine, select
 
 from dotenv import load_dotenv
 
 from schemas.users import User
-from dependencies.auth import encrypt_field, verify_field
+from dependencies.auth import verify_field
 
 load_dotenv()
 
@@ -21,7 +20,8 @@ engine = create_engine(DATABASE_URL, echo=os.environ["SQL_ECHO"].lower()=="true"
 
 def build_tables(password):
     """
-    Create all tables that don't exist in the database. This function is only available for the admin user.
+    Create all tables that don't exist in the database. 
+    This function is only available for the admin user.
     """
     if verify_field(password, os.environ["USERS_RESET_PASSWORD_ENCRYPTED"]):
         SQLModel.metadata.create_all(engine)
@@ -31,7 +31,8 @@ def build_tables(password):
 
 def reset_tables(password):
     """
-    Reset all the tables in the database. This function is only available for the admin user.
+    Reset all the tables in the database. 
+    This function is only available for the admin user.
     """
     if verify_field(password, os.environ["USERS_RESET_PASSWORD_ENCRYPTED"]):
         SQLModel.metadata.drop_all(engine)
@@ -62,8 +63,6 @@ async def update_user_active_status(user_id: int, active: bool):
             session.commit()
             session.refresh(user)
             return user
-        else:
-            return None
 
 
 async def get_user_by_email(email: str):
@@ -84,4 +83,3 @@ async def get_user_by_id(user_id: str):
         statement = select(User).where(User.user_id == user_id)
         users = session.exec(statement)
         return users.first()
-
