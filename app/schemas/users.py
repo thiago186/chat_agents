@@ -13,7 +13,7 @@ from dependencies.auth import encrypt_field, verify_field
 class User(SQLModel, table=True):
     """This class defines the schema for the User model."""
     user_id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
-    email: str
+    email: str Field(..., unique=True)
     username: str
     hashed_password: str
     current_plan: str
