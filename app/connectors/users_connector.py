@@ -1,29 +1,30 @@
 """This file contains the connector for the users table."""
 
 import logging
-import os
 from sqlmodel import SQLModel, Session, create_engine, select
 
 from dotenv import load_dotenv
 
+from config import settings
+from dependencies.auth import (
+    verify_field,
+    encrypt_field,
+    generate_jwt_token,
+    verify_jwt_token
+)
 from schemas.users import User
-from dependencies.auth import verify_field, encrypt_field
+from utils.exceptions import AuthenticationError, UserNotFoundError
 
-load_dotenv()
+
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.DEBUG,
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-DATABASE_URL = (
-    f"postgresql://{os.environ['POSTGRES_USER']}:{os.environ['POSTGRES_PASSWORD']}"
-    f"@{os.environ['DATABASE_HOST']}:{os.environ['DATABASE_PORT']}"
-    f"/{os.environ['POSTGRES_DB']}"
-)
+DATABASE_URL = settings.database_url
 
-engine = create_engine(
-    DATABASE_URL, echo=os.environ["SQL_ECHO"].lower() == "true")
+engine = create_engine(DATABASE_URL, echo=settings.SQL_ECHO)
 
 
 def build_tables(password):
@@ -31,7 +32,7 @@ def build_tables(password):
     Create all tables that don't exist in the database.
     This function is only available for the admin user.
     """
-    if verify_field(password, os.environ["USERS_RESET_PASSWORD_ENCRYPTED"]):
+    if verify_field(password, settings.USERS_RESET_PASSWORD_ENCRYPTED):
         SQLModel.metadata.create_all(engine)
     else:
         print("You don't have permission to do this. Users will not be reseted.")
@@ -42,7 +43,7 @@ def reset_tables(password):
     Reset all the tables in the database.
     This function is only available for the admin user.
     """
-    if verify_field(password, os.environ["USERS_RESET_PASSWORD_ENCRYPTED"]):
+    if verify_field(password, settings.USERS_RESET_PASSWORD_ENCRYPTED):
         SQLModel.metadata.drop_all(engine)
         SQLModel.metadata.create_all(engine)
     else:
@@ -96,12 +97,12 @@ async def update_user_active_status(user_id: int, active: bool):
             return user
 
 
-async def change_user_password(user_id: str, new_password: str):
+async def change_user_password(user_email: str, new_password: str):
     """
     Change user's password
     """
     with Session(engine) as session:
-        statement = select(User).where(User.user_id == user_id)
+        statement = select(User).where(User.email == user_email)
         user = session.exec(statement).first()
         logging.debug(f"Found user: {user}")
         if user:
@@ -110,3 +111,22 @@ async def change_user_password(user_id: str, new_password: str):
             session.commit()
             session.refresh(user)
             return user
+    
+    raise UserNotFoundError("User not found")
+
+
+async def authenticate_user(user_email: str, password):
+    """
+    Authenticate a user.
+    """
+    user = await get_user_by_email(user_email)
+
+    if not user:
+        raise AuthenticationError("User not found")
+    
+    if not verify_field(password, user.hashed_password):
+        raise AuthenticationError("Invalid credentials")
+    
+    jwt = generate_jwt_token(str(user.user_id))
+
+    return {"jwt": jwt}
