@@ -49,17 +49,6 @@ def reset_tables(password):
         print("You don't have permission to do this. Users will not be reseted.")
 
 
-async def create_user(user: User):
-    """
-    Create a new user in the database.
-    """
-    with Session(engine) as session:
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        return user
-
-
 async def get_user_by_email(email: str):
     """
     Get a user by its email.
@@ -78,6 +67,20 @@ async def get_user_by_id(user_id: str):
         statement = select(User).where(User.user_id == user_id)
         users = session.exec(statement)
         return users.first()
+
+
+async def create_user(user: User):
+    """
+    Create a new user in the database.
+    """
+    if not await get_user_by_email(user.email):
+        with Session(engine) as session:
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            return user
+    else:
+        raise Exception("User already exists.")
 
 
 async def update_user_active_status(user_id: int, active: bool):
